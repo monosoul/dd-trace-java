@@ -110,14 +110,10 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
     expect:
     assertTraces(1) {
       trace(expectedNumberOfSpans, true) {
-        span(4) {
-          operationName "trace.annotation"
-          parent()
-        }
         def topLevelSpan = span(3)
         span(3) {
           operationName "top-level"
-          childOf span(4)
+          parent()
         }
         span(2) {
           operationName "synchronous-child"

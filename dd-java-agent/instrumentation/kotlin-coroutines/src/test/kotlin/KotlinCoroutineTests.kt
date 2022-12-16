@@ -159,16 +159,13 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
    *
    * -------------------- Second job starts ---------------------------- Second job completes ---
    */
-  @Trace
   fun tracedWithSuspendingCoroutines(): Int {
     fun jobContext(jobName: String) = CoroutineName(jobName)
 
-    return runTest {
-      val jobs = mutableListOf<Deferred<Unit>>()
-
+    val jobs = mutableListOf<Deferred<Unit>>()
+    val ret = runTest {
       val beforeFirstJobStartedMutex = Mutex(locked = true)
       val afterFirstJobStartedMutex = Mutex(locked = true)
-
       val beforeFirstJobCompletedMutex = Mutex(locked = true)
       val afterFirstJobCompletedMutex = Mutex(locked = true)
 
@@ -178,7 +175,7 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
         }
 
         // this coroutine starts before the second one starts and completes before the second one
-        async(jobContext("first")) {
+        async(jobContext("first"), CoroutineStart.LAZY) {
           beforeFirstJobStartedMutex.lock()
           childSpan("first-span").activateAndUse {
             afterFirstJobStartedMutex.unlock()
@@ -188,7 +185,7 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
         }.run(jobs::add)
 
         // this coroutine starts after the first one and completes after the first one
-        async(jobContext("second")) {
+        async(jobContext("second"), CoroutineStart.LAZY) {
           afterFirstJobStartedMutex.withLock {
             childSpan("second-span").activateAndUse {
               beforeFirstJobCompletedMutex.unlock()
@@ -196,13 +193,16 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
             }
           }
         }.run(jobs::add)
+
+        jobs.forEach { job -> job.start() }
+        beforeFirstJobStartedMutex.unlock()
+        jobs.awaitAll()
       }
-      beforeFirstJobStartedMutex.unlock()
 
-      jobs.awaitAll()
-
-      5
+      4
     }
+
+    return ret
   }
 
   private suspend fun AgentSpan.activateAndUse(block: suspend () -> Unit) {
@@ -213,7 +213,7 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
   }
 
   private fun <T> runTest(asyncPropagation: Boolean = true, block: suspend CoroutineScope.() -> T): T {
-    activeScope().setAsyncPropagation(asyncPropagation)
+    activeScope()?.setAsyncPropagation(asyncPropagation)
     return runBlocking(dispatcher, block = block)
   }
 }
