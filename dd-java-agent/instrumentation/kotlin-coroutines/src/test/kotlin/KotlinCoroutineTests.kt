@@ -193,11 +193,11 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
             }
           }
         }.run(jobs::add)
-
-        jobs.forEach { job -> job.start() }
-        beforeFirstJobStartedMutex.unlock()
-        jobs.awaitAll()
       }
+
+      jobs.forEach { job -> job.start() }
+      beforeFirstJobStartedMutex.unlock()
+      jobs.awaitAll()
 
       4
     }
