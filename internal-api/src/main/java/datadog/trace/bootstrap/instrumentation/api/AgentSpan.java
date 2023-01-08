@@ -69,6 +69,8 @@ public interface AgentSpan extends MutableSpan, IGSpanInfo {
 
   short getHttpStatusCode();
 
+  boolean isFinished();
+
   void finish();
 
   void finish(long finishMicros);

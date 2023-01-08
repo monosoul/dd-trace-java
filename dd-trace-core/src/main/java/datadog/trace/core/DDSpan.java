@@ -137,6 +137,7 @@ public class DDSpan
         }
       };
 
+  @Override
   public boolean isFinished() {
     return durationNano != 0;
   }
