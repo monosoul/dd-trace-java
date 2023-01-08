@@ -16,19 +16,24 @@ import org.jetbrains.annotations.Nullable;
 public class ScopeStateCoroutineContext
     implements ThreadContextElement<ScopeState>, Function1<Throwable, Unit> {
 
-  private static final Key<ScopeStateCoroutineContext> KEY = new ContextElementKey();
+  public static final Key<ScopeStateCoroutineContext> KEY = new ContextElementKey();
   private final ScopeState coroutineScopeState;
-  @Nullable private final AgentScope.Continuation continuation;
+  @Nullable private AgentScope.Continuation continuation;
   @Nullable private AgentScope continuationScope;
+  private Boolean isInitialized = false;
 
   public ScopeStateCoroutineContext() {
     coroutineScopeState = AgentTracer.get().newScopeState();
-    final AgentScope activeScope = AgentTracer.get().activeScope();
-    if (activeScope != null) {
-      activeScope.setAsyncPropagation(true);
-      continuation = activeScope.captureConcurrent();
-    } else {
-      continuation = null;
+  }
+
+  public void maybeInitialize() {
+    if (!isInitialized) {
+      final AgentScope activeScope = AgentTracer.get().activeScope();
+      if (activeScope != null) {
+        activeScope.setAsyncPropagation(true);
+        continuation = activeScope.captureConcurrent();
+      }
+      isInitialized = true;
     }
   }
 
@@ -87,7 +92,7 @@ public class ScopeStateCoroutineContext
     getJob(coroutineContext).invokeOnCompletion(this);
   }
 
-  private void closeScopeAndCancelContinuation() {
+  private void maybeCloseScopeAndCancelContinuation() {
     final ScopeState currentThreadScopeState = AgentTracer.get().newScopeState();
     currentThreadScopeState.fetchFromActive();
 
@@ -96,14 +101,16 @@ public class ScopeStateCoroutineContext
     if (continuationScope != null) {
       continuationScope.close();
     }
-    continuation.cancel();
+    if (continuation != null) {
+      continuation.cancel();
+    }
 
     currentThreadScopeState.activate();
   }
 
   @Override
   public Unit invoke(Throwable throwable) {
-    closeScopeAndCancelContinuation();
+    maybeCloseScopeAndCancelContinuation();
 
     return Unit.INSTANCE;
   }

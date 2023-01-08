@@ -201,7 +201,32 @@ class KotlinCoroutineTests(private val dispatcher: CoroutineDispatcher) {
   @Trace
   fun tracedWithLazyStarting(): Int = runTest {
     val spans = AtomicInteger(1)
-    createAndWaitForCoroutines(lazy = true, spans = spans)
+    val jobs = mutableListOf<Deferred<Unit>>()
+
+    childSpan("top-level").activateAndUse {
+      spans.incrementAndGet()
+      async(jobName("first"), CoroutineStart.LAZY) {
+        childSpan("first-span").activateAndUse {
+          spans.incrementAndGet()
+          delay(1)
+        }
+      }.run(jobs::add)
+
+      async(jobName("second"), CoroutineStart.LAZY) {
+        childSpan("second-span").activateAndUse {
+          spans.incrementAndGet()
+          delay(1)
+        }
+      }.run(jobs::add)
+    }
+
+    jobs[0].start()
+    childSpan("lazy-start").activateAndUse {
+      spans.incrementAndGet()
+      jobs[1].start()
+    }
+    jobs.awaitAll()
+
     spans.get()
   }
 

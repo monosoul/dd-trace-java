@@ -137,7 +137,7 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
     }
   }
 
-  def "lazily started coroutines should respect the span that was active at creation time"() {
+  def "lazily started coroutines should inherit the span active at start time"() {
     setup:
     KotlinCoroutineTests kotlinTest = new KotlinCoroutineTests(dispatcher)
     int expectedNumberOfSpans = kotlinTest.tracedWithLazyStarting()
@@ -145,22 +145,25 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
     expect:
     assertTraces(1) {
       trace(expectedNumberOfSpans, true) {
-        span(3) {
+        span(4) {
           operationName "trace.annotation"
           parent()
         }
-        def topLevelSpan = span(2)
-        span(2) {
+        span(3) {
           operationName "top-level"
-          childOf span(3)
+          childOf span(4)
         }
         span(1) {
+          operationName "lazy-start"
+          childOf span(4)
+        }
+        span(2) {
           operationName "second-span"
-          childOf topLevelSpan
+          childOf span(1)
         }
         span(0) {
           operationName "first-span"
-          childOf topLevelSpan
+          childOf span(4)
         }
       }
     }
@@ -184,10 +187,29 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
   def "coroutine instrumentation should work when started lazily without an enclosing trace span"() {
     setup:
     KotlinCoroutineTests kotlinTest = new KotlinCoroutineTests(dispatcher)
-    int expectedNumberOfSpans = kotlinTest.withNoTraceParentSpan(true, false)
+    kotlinTest.withNoTraceParentSpan(true, false)
 
     expect:
-    assertTopLevelSpanWithTwoSubSpans(expectedNumberOfSpans)
+    assertTraces(3, SORT_TRACES_BY_NAMES) {
+      trace(1, true) {
+        span(0) {
+          operationName "first-span"
+          parent()
+        }
+      }
+      trace(1, true) {
+        span(0) {
+          operationName "second-span"
+          parent()
+        }
+      }
+      trace(1, true) {
+        span(0) {
+          operationName "top-level"
+          parent()
+        }
+      }
+    }
 
     where:
     dispatcher << dispatchersToTest
@@ -208,10 +230,41 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
   def "coroutine instrumentation should work when started lazily without an enclosing trace span and throwing exceptions"() {
     setup:
     KotlinCoroutineTests kotlinTest = new KotlinCoroutineTests(dispatcher)
-    int expectedNumberOfSpans = kotlinTest.withNoTraceParentSpan(true, true)
+    int expectedTraces = kotlinTest.withNoTraceParentSpan(true, true)
 
     expect:
-    assertTopLevelSpanWithTwoSubSpans(expectedNumberOfSpans, true)
+    assertTraces(expectedTraces, SORT_TRACES_BY_NAMES) {
+      if (expectedTraces == 3) {
+        trace(1, true) {
+          span(0) {
+            operationName "first-span"
+            parent()
+          }
+        }
+        trace(1, true) {
+          span(0) {
+            operationName "second-span"
+            parent()
+          }
+        }
+      } else {
+        trace(1, true) {
+          span(0) {
+            span(0) {
+              parent()
+              // either of the jobs could have been started first, thrown, and canceled the other job
+              operationName { name -> (name == 'first-span' || name == 'second-span') }
+            }
+          }
+        }
+      }
+      trace(1, true) {
+        span(0) {
+          operationName "top-level"
+          parent()
+        }
+      }
+    }
 
     where:
     dispatcher << dispatchersToTest
