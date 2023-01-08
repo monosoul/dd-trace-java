@@ -256,11 +256,6 @@ public final class TestSpan implements AgentSpan {
   }
 
   @Override
-  public boolean isFinished() {
-    return false;
-  }
-
-  @Override
   public void finish() {}
 
   @Override
