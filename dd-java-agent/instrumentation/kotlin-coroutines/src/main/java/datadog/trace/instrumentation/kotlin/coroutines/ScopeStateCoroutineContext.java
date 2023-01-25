@@ -1,6 +1,8 @@
 package datadog.trace.instrumentation.kotlin.coroutines;
 
+import static datadog.trace.instrumentation.kotlin.coroutines.AbstractKotlinCoroutinesInstrumentation.prefixedPropertyName;
 import static datadog.trace.instrumentation.kotlin.coroutines.CoroutineContextHelper.getJob;
+import static java.lang.Boolean.getBoolean;
 
 import datadog.trace.bootstrap.instrumentation.api.AgentScope;
 import datadog.trace.bootstrap.instrumentation.api.AgentTracer;
@@ -29,9 +31,15 @@ public class ScopeStateCoroutineContext
   public void maybeInitialize() {
     if (!isInitialized) {
       final AgentScope activeScope = AgentTracer.get().activeScope();
+      final boolean autoPropagationEnabled =
+          getBoolean(prefixedPropertyName("auto_propagation.enabled"));
       if (activeScope != null) {
-        activeScope.setAsyncPropagation(true);
-        continuation = activeScope.captureConcurrent();
+        if (autoPropagationEnabled) {
+          activeScope.setAsyncPropagation(true);
+        }
+        if (activeScope.isAsyncPropagating()) {
+          continuation = activeScope.captureConcurrent();
+        }
       }
       isInitialized = true;
     }

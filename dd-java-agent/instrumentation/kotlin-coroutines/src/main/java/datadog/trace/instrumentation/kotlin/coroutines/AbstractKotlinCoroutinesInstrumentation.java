@@ -9,8 +9,14 @@ abstract class AbstractKotlinCoroutinesInstrumentation extends Instrumenter.Trac
       "kotlinx.coroutines.CoroutineContextKt";
   protected static final String COROUTINE_CONTEXT_CLASS_NAME = "kotlin.coroutines.CoroutineContext";
 
+  private static final String INSTRUMENTATION_NAME = "kotlin_coroutine.experimental";
+
   public AbstractKotlinCoroutinesInstrumentation() {
-    super("kotlin_coroutine.experimental");
+    super(INSTRUMENTATION_NAME);
+  }
+
+  static String prefixedPropertyName(final String propertyName) {
+    return "dd.integration." + INSTRUMENTATION_NAME + "." + propertyName;
   }
 
   @Override
@@ -24,6 +30,7 @@ abstract class AbstractKotlinCoroutinesInstrumentation extends Instrumenter.Trac
       packageName + ".ScopeStateCoroutineContext",
       packageName + ".ScopeStateCoroutineContext$ContextElementKey",
       packageName + ".CoroutineContextHelper",
+      packageName + ".AbstractKotlinCoroutinesInstrumentation",
     };
   }
 }
