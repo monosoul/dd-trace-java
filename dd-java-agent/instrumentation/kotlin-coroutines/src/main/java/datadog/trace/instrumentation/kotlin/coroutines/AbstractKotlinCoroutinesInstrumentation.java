@@ -9,8 +9,8 @@ abstract class AbstractKotlinCoroutinesInstrumentation extends Instrumenter.Trac
       "kotlinx.coroutines.CoroutineContextKt";
   protected static final String COROUTINE_CONTEXT_CLASS_NAME = "kotlin.coroutines.CoroutineContext";
 
-  public AbstractKotlinCoroutinesInstrumentation(final String instrumentationName) {
-    super(instrumentationName);
+  public AbstractKotlinCoroutinesInstrumentation() {
+    super("kotlin_coroutine.experimental");
   }
 
   @Override

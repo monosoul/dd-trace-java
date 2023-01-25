@@ -15,10 +15,6 @@ import net.bytebuddy.asm.Advice;
 public class CoroutineContextKtInstrumentation extends AbstractKotlinCoroutinesInstrumentation
     implements Instrumenter.ForSingleType {
 
-  public CoroutineContextKtInstrumentation() {
-    super("kotlin-coroutine-context-kt");
-  }
-
   @Override
   public String instrumentedType() {
     return COROUTINE_CONTEXT_KT_CLASS_NAME;

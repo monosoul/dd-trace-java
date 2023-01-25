@@ -24,10 +24,6 @@ import net.bytebuddy.matcher.ElementMatcher;
 public class AbstractCoroutineInstrumentation extends AbstractKotlinCoroutinesInstrumentation
     implements Instrumenter.ForTypeHierarchy {
 
-  public AbstractCoroutineInstrumentation() {
-    super("kotlin-abstract-coroutine");
-  }
-
   @Override
   public void adviceTransformations(AdviceTransformation transformation) {
     transformation.applyAdvice(
