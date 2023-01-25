@@ -14,6 +14,11 @@ abstract class AbstractKotlinCoroutinesInstrumentation extends Instrumenter.Trac
   }
 
   @Override
+  protected final boolean defaultEnabled() {
+    return false;
+  }
+
+  @Override
   public String[] helperClassNames() {
     return new String[] {
       packageName + ".ScopeStateCoroutineContext",

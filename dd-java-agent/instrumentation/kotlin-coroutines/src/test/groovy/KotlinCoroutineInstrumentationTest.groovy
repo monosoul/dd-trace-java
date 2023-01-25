@@ -15,6 +15,13 @@ class KotlinCoroutineInstrumentationTest extends AgentTestRunner {
     ThreadPoolDispatcherKt.newSingleThreadContext("Single-Thread"),
   ]
 
+  @Override
+  void configurePreAgent() {
+    super.configurePreAgent()
+
+    injectSysConfig("dd.integration.kotlin_coroutine.experimental.enabled", "true")
+  }
+
   def "kotlin traced across channels"() {
     setup:
     KotlinCoroutineTests kotlinTest = new KotlinCoroutineTests(dispatcher)
