@@ -20,7 +20,7 @@ public class ScopeStateCoroutineContext
   private final ScopeState coroutineScopeState;
   @Nullable private AgentScope.Continuation continuation;
   @Nullable private AgentScope continuationScope;
-  private Boolean isInitialized = false;
+  private boolean isInitialized = false;
 
   public ScopeStateCoroutineContext() {
     coroutineScopeState = AgentTracer.get().newScopeState();
