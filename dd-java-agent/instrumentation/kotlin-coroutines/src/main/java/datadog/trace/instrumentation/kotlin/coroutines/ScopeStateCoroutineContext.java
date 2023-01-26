@@ -1,22 +1,15 @@
 package datadog.trace.instrumentation.kotlin.coroutines;
 
-import static datadog.trace.instrumentation.kotlin.coroutines.AbstractKotlinCoroutinesInstrumentation.prefixedPropertyName;
-import static datadog.trace.instrumentation.kotlin.coroutines.CoroutineContextHelper.getJob;
-import static java.lang.Boolean.getBoolean;
-
 import datadog.trace.bootstrap.instrumentation.api.AgentScope;
 import datadog.trace.bootstrap.instrumentation.api.AgentTracer;
 import datadog.trace.bootstrap.instrumentation.api.ScopeState;
-import kotlin.Unit;
 import kotlin.coroutines.CoroutineContext;
-import kotlin.jvm.functions.Function1;
 import kotlin.jvm.functions.Function2;
 import kotlinx.coroutines.ThreadContextElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ScopeStateCoroutineContext
-    implements ThreadContextElement<ScopeState>, Function1<Throwable, Unit> {
+public class ScopeStateCoroutineContext implements ThreadContextElement<ScopeState> {
 
   public static final Key<ScopeStateCoroutineContext> KEY = new ContextElementKey();
   private final ScopeState coroutineScopeState;
@@ -31,15 +24,8 @@ public class ScopeStateCoroutineContext
   public void maybeInitialize() {
     if (!isInitialized) {
       final AgentScope activeScope = AgentTracer.get().activeScope();
-      final boolean autoPropagationEnabled =
-          getBoolean(prefixedPropertyName("auto_propagation.enabled"));
-      if (activeScope != null) {
-        if (autoPropagationEnabled) {
-          activeScope.setAsyncPropagation(true);
-        }
-        if (activeScope.isAsyncPropagating()) {
-          continuation = activeScope.captureConcurrent();
-        }
+      if (activeScope != null && activeScope.isAsyncPropagating()) {
+        continuation = activeScope.captureConcurrent();
       }
       isInitialized = true;
     }
@@ -60,7 +46,6 @@ public class ScopeStateCoroutineContext
 
     if (continuation != null && continuationScope == null) {
       continuationScope = continuation.activate();
-      registerOnCompletionCallback(coroutineContext);
     }
 
     return oldScopeState;
@@ -96,11 +81,7 @@ public class ScopeStateCoroutineContext
     return KEY;
   }
 
-  public void registerOnCompletionCallback(final CoroutineContext coroutineContext) {
-    getJob(coroutineContext).invokeOnCompletion(this);
-  }
-
-  private void maybeCloseScopeAndCancelContinuation() {
+  public void maybeCloseScopeAndCancelContinuation() {
     final ScopeState currentThreadScopeState = AgentTracer.get().newScopeState();
     currentThreadScopeState.fetchFromActive();
 
@@ -114,13 +95,6 @@ public class ScopeStateCoroutineContext
     }
 
     currentThreadScopeState.activate();
-  }
-
-  @Override
-  public Unit invoke(Throwable throwable) {
-    maybeCloseScopeAndCancelContinuation();
-
-    return Unit.INSTANCE;
   }
 
   static class ContextElementKey implements Key<ScopeStateCoroutineContext> {}
