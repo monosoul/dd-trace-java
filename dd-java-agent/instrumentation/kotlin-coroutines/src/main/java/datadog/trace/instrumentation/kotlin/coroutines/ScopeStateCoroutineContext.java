@@ -21,6 +21,10 @@ public class ScopeStateCoroutineContext implements ThreadContextElement<ScopeSta
     coroutineScopeState = AgentTracer.get().newScopeState();
   }
 
+  /**
+   * If there is an active scope at the time of invocation, and it is async propagated, then
+   * captures the scope's continuation
+   */
   public void maybeInitialize() {
     if (!isInitialized) {
       final AgentScope activeScope = AgentTracer.get().activeScope();
@@ -51,6 +55,26 @@ public class ScopeStateCoroutineContext implements ThreadContextElement<ScopeSta
     return oldScopeState;
   }
 
+  /**
+   * If the context element has a captured scope continuation and an active scope, then closes the
+   * scope and cancels the continuation.
+   */
+  public void maybeCloseScopeAndCancelContinuation() {
+    final ScopeState currentThreadScopeState = AgentTracer.get().newScopeState();
+    currentThreadScopeState.fetchFromActive();
+
+    coroutineScopeState.activate();
+
+    if (continuationScope != null) {
+      continuationScope.close();
+    }
+    if (continuation != null) {
+      continuation.cancel();
+    }
+
+    currentThreadScopeState.activate();
+  }
+
   @Nullable
   @Override
   public <E extends Element> E get(@NotNull final Key<E> key) {
@@ -79,22 +103,6 @@ public class ScopeStateCoroutineContext implements ThreadContextElement<ScopeSta
   @Override
   public Key<?> getKey() {
     return KEY;
-  }
-
-  public void maybeCloseScopeAndCancelContinuation() {
-    final ScopeState currentThreadScopeState = AgentTracer.get().newScopeState();
-    currentThreadScopeState.fetchFromActive();
-
-    coroutineScopeState.activate();
-
-    if (continuationScope != null) {
-      continuationScope.close();
-    }
-    if (continuation != null) {
-      continuation.cancel();
-    }
-
-    currentThreadScopeState.activate();
   }
 
   static class ContextElementKey implements Key<ScopeStateCoroutineContext> {}

@@ -86,6 +86,13 @@ public class AbstractCoroutineInstrumentation extends Instrumenter.Tracing
     return extendsClass(named(hierarchyMarkerType()));
   }
 
+  /**
+   * Guarantees every coroutine created has a new instance of ScopeStateCoroutineContext, so that it
+   * is never inherited from the parent context.
+   *
+   * @see ScopeStateCoroutineContext
+   * @see AbstractCoroutine#AbstractCoroutine(CoroutineContext, boolean)
+   */
   public static class AbstractCoroutineConstructorAdvice {
     @Advice.OnMethodEnter
     public static void constructorInvocation(
@@ -101,6 +108,13 @@ public class AbstractCoroutineInstrumentation extends Instrumenter.Tracing
     }
   }
 
+  /**
+   * If/when coroutine is started lazily, initializes ScopeStateCoroutineContext element on
+   * coroutine start
+   *
+   * @see ScopeStateCoroutineContext
+   * @see AbstractCoroutine#onStart()
+   */
   public static class AbstractCoroutineOnStartAdvice {
     @Advice.OnMethodEnter
     public static void onStartInvocation(@Advice.This final AbstractCoroutine<?> coroutine) {
@@ -113,6 +127,13 @@ public class AbstractCoroutineInstrumentation extends Instrumenter.Tracing
     }
   }
 
+  /**
+   * Guarantees a ScopeStateCoroutineContext element is always closed when coroutine transitions
+   * into a terminal state.
+   *
+   * @see ScopeStateCoroutineContext
+   * @see AbstractCoroutine#onCompletionInternal(Object)
+   */
   public static class JobSupportAfterCompletionInternalAdvice {
     @Advice.OnMethodEnter
     public static void onCompletionInternal(@Advice.This final AbstractCoroutine<?> coroutine) {
